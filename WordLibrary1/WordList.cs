@@ -10,99 +10,109 @@ namespace WordLibrary1
         public string Name { get; }
         public string[] Languages { get; }
         
-        private List<Word> words = new List<Word>();   
+        
+        private List<Word> words { get; } = new List<Word>();
+
+        private static readonly string folder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        private static readonly string Specfile = Path.Combine(folder, "WordTrainer");
+
+
 
         public WordList(string name, params string[] languages)
         {
-            Name = name.ToLower();
+            Name = name;
             Languages = languages;
         }
 
 
         public static string[] GetLists()
-        {          
-            Fold.CreateFolder();
-            var files = Directory.GetFiles(Fold.Specfile).Select(Path.GetFileNameWithoutExtension).ToArray();
-            return files;
+        {
+
+            var files = Directory.GetFiles(Specfile).Select(Path.GetFileNameWithoutExtension).ToArray();
+            return files;           
+
         }
 
         public static WordList LoadList(string name)
         {
-            Fold.CreateFolder();
-            var sr = new StreamReader(Fold.GetFilePath(name));
-            var lang = sr.ReadLine();
-            var language = lang.ToLower().TrimEnd(';').Split(';');
-            WordList wordList = new WordList(name, language);
-            
-            if (lang == null)
-            {
-                return null;
-            }
-            if (File.Exists(Fold.GetFilePath(name.ToLower())))
-            {
-                var file = Fold.GetFilePath(name);
-                var fs = File.Create(file);
-                fs.Close();
+            var folder = Specfile + "\\" + $"{name}.dat";
 
-                while (!sr.EndOfStream)
+            if (File.Exists(folder))
+            {
+                var sr = new StreamReader(Specfile + "\\" + $"{name}.dat");
+                var file = sr.ReadLine();
+                var languages = file.TrimEnd(';').Split(';');
+                var wordList = new WordList(name, languages);
+                file = sr.ReadLine();
+
+                while (file != null)
                 {
-                    var translations = sr.ReadLine().TrimEnd(';').Split(';');
-                    wordList.Add(translations);
+                    var translation = new Word(file.TrimEnd(';').Split(';'));
+                   
+                    wordList.words.Add(translation);
+                    file = sr.ReadLine();
                 }
+
+                sr.Close();
                 return wordList;
             }
+
             return null;
+
+
 
         }
 
+
         public void Save()
         {
-            LoadList(Name);
-            var file = Fold.GetFilePath(Name);
-            var fs = File.Create(Fold.GetFilePath(Name));
-            fs.Close();
 
-            foreach (var language in Languages)
+            var folder = Specfile + "\\" + $"{Name}.dat";
+            if (File.Exists(folder))
             {
-                
-                File.AppendAllText(file, $"{language};");
-            }
-            foreach (var words in words)
-            {
-                File.AppendAllText(file, "\n");
-
-                for (int i = 0; i < Languages.Length; i++)
+                var fs = new StreamWriter(folder);
+                fs.WriteLine(Languages[0] + ";" + Languages[1]);
+                foreach (var language in words)
                 {
-                    File.AppendAllText(file, $"{words.Translations[i]};");
+                    fs.WriteLine(language.Translations[0] + ";" + language.Translations[1]);
+
+
+                }      
+                fs.Close();
+            }
+            else
+            {
+                var fs = new StreamWriter(folder);
+                    fs.WriteLine(Languages[0] + ";" + Languages[1]);
+                    fs.Close();
+                foreach (var language in words)
+                {
+                    fs.WriteLine(language.Translations[0] + ";" + language.Translations[1]);
                 }
-            }            
+            }
+                           
 
         }
 
         public void Add(params string[] translation)
         {
-            if(translation.Length == Languages.Length)
-            {
-                words.Add(new Word(translation));
-            }
-            else 
-            {
-                throw new ArgumentException();
-            }  
+            var newword = new Word(translation);
+            words.Add(newword);           
 
         }
 
         public Word GetWordToPractice()
-        {
-            LoadList(Name);
+        {          
+             
+
             Random rnd = new Random();
-            int rndWord = rnd.Next(words.Count);           
-            int fromLanguage = rnd.Next(Languages.Length);
-            int toLanguage = rnd.Next(Languages.Length);            
+            var rndWord = rnd.Next(0, words.Count);
+            var fromLanguage = rnd.Next(0, Languages.Length);
+            var toLanguage = rnd.Next(0, Languages.Length);            
             
             while (toLanguage == fromLanguage)
             {
-                toLanguage = rnd.Next(Languages.Length);
+                toLanguage = rnd.Next(0, Languages.Length);
             }
             Word word = new Word(fromLanguage, toLanguage, words[rndWord].Translations);
             return word;
@@ -115,21 +125,28 @@ namespace WordLibrary1
 
         public void List(int sortByTranslation, Action<string[]> showTranslations)
         {
-            var sortTrans = words.OrderBy(x => x.Translations[sortByTranslation]).ToArray();
 
-            LoadList(Name);            
+           var sortTrans = words.OrderBy(x => x.Translations[sortByTranslation]).ToList();
+                            
             foreach (var translation in sortTrans)
             {
                 showTranslations(translation.Translations);
             }
         }
+
         public bool Remove(int translations, string word)
         {
-            var removeWord = words.Where(x => x.Translations[translations] != word).ToList();
-            words = removeWord;
-            Save();
+            var removeword = 0;
+            if (words.Any(i => i.Translations[translations] == word))
+                removeword =
+                    words.IndexOf(words.First(i => i.Translations[translations] == word));
+            words.RemoveAt(removeword);
             return true;
+
         }
-       
+        public static void CreateFolder()
+        {
+            Directory.CreateDirectory(Specfile);
+        }
     }
 }

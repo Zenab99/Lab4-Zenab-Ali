@@ -24,9 +24,10 @@ namespace ConsoleApp
         private static void Main(string[] args)
         {
             WordList _wordList = null;
-            Fold.CreateFolder();
+            WordList.CreateFolder();
 
-            //  WordList wordList = new WordList();
+
+           
             if (args.Length == 0)
             {
                 Console.WriteLine("Use any of the following parameters : ");
@@ -125,8 +126,7 @@ namespace ConsoleApp
 
                 }
 
-            }           
-          
+            }                     
 
 
 
